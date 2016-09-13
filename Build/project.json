@@ -1,0 +1,20 @@
+{
+  "version" : "1.0.0.0",
+  "name": "NBitcoin.TestFramework",
+  "dependencies": {
+	"NBitcoin": "*",
+	"System.Diagnostics.Process": "4.1.0"
+  },
+  "frameworks": {
+      "netstandard1.3": {}
+  },
+  "buildOptions": {
+	"outputName": "NBitcoin.TestFramework",
+	"debugType": "portable",
+    "compile": {
+      "include": [
+        "../NBitcoin.TestFramework/**/*.cs"
+      ]
+    }
+  }
+}
