@@ -1,4 +1,6 @@
-﻿using NBitcoin.DataEncoders;
+﻿using NBitcoin;
+using NBitcoin.Crypto;
+using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
 using NBitcoin.RPC;
 using System;
@@ -8,8 +10,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,17 +48,85 @@ namespace NBitcoin.Tests
 	}
 	public class NodeBuilder : IDisposable
 	{
-		public static NodeBuilder Create(string pathToExe, [CallerMemberName] string testDirectory = null)
+		public static NodeBuilder Create([CallerMemberNameAttribute]string caller = null, string version = "0.13.1")
 		{
+			version = version ?? "0.13.1";
+			var path = EnsureDownloaded(version);
+			bool retryDelete = true;
 			try
 			{
-				Directory.Delete(testDirectory, true);
+				Directory.Delete(caller, true);
+				retryDelete = false;
 			}
 			catch(DirectoryNotFoundException)
 			{
+				retryDelete = false;
 			}
-			Directory.CreateDirectory(testDirectory);
-			return new NodeBuilder(testDirectory, pathToExe);
+			catch(UnauthorizedAccessException)
+			{
+			}
+			catch(IOException)
+			{
+			}
+			if(retryDelete)
+			{
+				foreach(var bitcoind in Process.GetProcessesByName("bitcoind"))
+				{
+					if(bitcoind.MainModule.FileName.Contains("TestData"))
+					{
+						bitcoind.Kill();
+					}
+				}
+				Thread.Sleep(1000);
+				Directory.Delete(caller, true);
+			}
+			Directory.CreateDirectory(caller);
+			Directory.CreateDirectory(caller);
+			return new NodeBuilder(caller, path);
+		}
+
+		private static string EnsureDownloaded(string version)
+		{
+			//is a file
+			if(version.Length >= 2 && version[1] == ':')
+			{
+				return version;
+			}
+
+			string zip;
+			string bitcoind;
+			if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			{
+				bitcoind = String.Format("TestData/bitcoin-{0}/bin/bitcoind.exe", version);
+				if(File.Exists(bitcoind))
+					return bitcoind;
+				zip = String.Format("TestData/bitcoin-{0}-win32.zip", version);
+				string url = String.Format("https://bitcoin.org/bin/bitcoin-core-{0}/" + Path.GetFileName(zip), version);
+				HttpClient client = new HttpClient();
+				client.Timeout = TimeSpan.FromMinutes(10.0);
+				var data = client.GetByteArrayAsync(url).GetAwaiter().GetResult();
+				File.WriteAllBytes(zip, data);
+				ZipFile.ExtractToDirectory(zip, new FileInfo(zip).Directory.FullName);
+			}
+			else
+			{
+				bitcoind = String.Format("TestData/bitcoin-{0}/bin/bitcoind", version);
+				if(File.Exists(bitcoind))
+					return bitcoind;
+
+				zip = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
+					String.Format("TestData/bitcoin-{0}-x86_64-linux-gnu.tar.gz", version)
+					: String.Format("TestData/bitcoin-{0}-osx64.tar.gz", version);
+
+				string url = String.Format("https://bitcoin.org/bin/bitcoin-core-{0}/" + Path.GetFileName(zip), version);
+				HttpClient client = new HttpClient();
+				client.Timeout = TimeSpan.FromMinutes(10.0);
+				var data = client.GetByteArrayAsync(url).GetAwaiter().GetResult();
+				File.WriteAllBytes(zip, data);
+				Process.Start("tar", "-zxvf " + zip + " -C TestData").WaitForExit();
+			}
+			File.Delete(zip);
+			return bitcoind;
 		}
 
 		int last = 0;
@@ -374,6 +446,12 @@ namespace NBitcoin.Tests
 			transactions.AddRange(tasks.Select(t => t.Result).ToArray());
 		}
 
+		public void Broadcast(Transaction[] transactions)
+		{
+			foreach(var tx in transactions)
+				Broadcast(tx);
+		}
+
 		public void Split(Money amount, int parts)
 		{
 			var rpc = CreateRPCClient();
@@ -468,7 +546,7 @@ namespace NBitcoin.Tests
 			return blocks.ToArray();
 #endif
 		}
-
+		
 		public void BroadcastBlocks(Block[] blocks)
 		{
 			using(var node = CreateNodeClient())
@@ -490,10 +568,10 @@ namespace NBitcoin.Tests
 			node.PingPong();
 		}
 
-		public void FindBlock(int blockCount = 1, bool includeMempool = true)
+		public Block[] FindBlock(int blockCount = 1, bool includeMempool = true)
 		{
 			SelectMempoolTransactions();
-			Generate(blockCount, includeMempool);
+			return Generate(blockCount, includeMempool);
 		}
 
 		class TransactionNode
