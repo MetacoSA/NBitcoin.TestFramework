@@ -92,6 +92,8 @@ namespace NBitcoin.Tests
 			{
 				return version;
 			}
+			if(!Directory.Exists("TestData"))
+				Directory.CreateDirectory("TestData");
 
 			string zip;
 			string bitcoind;
