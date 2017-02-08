@@ -29,12 +29,17 @@ namespace NBitcoin.Tests
 	}
 	public class NodeConfigParameters : Dictionary<string, string>
 	{
-		public void Import(NodeConfigParameters configParameters)
+		public void Import(NodeConfigParameters configParameters, bool overrides)
 		{
 			foreach(var kv in configParameters)
 			{
 				if(!ContainsKey(kv.Key))
 					Add(kv.Key, kv.Value);
+				else if(overrides)
+				{
+					Remove(kv.Key);
+					Add(kv.Key, kv.Value);
+				}
 			}
 		}
 
@@ -256,7 +261,7 @@ namespace NBitcoin.Tests
 			var pass = Encoders.Hex.EncodeData(RandomUtils.GetBytes(20));
 			creds = new NetworkCredential(pass, pass);
 			_Config = Path.Combine(dataDir, "bitcoin.conf");
-			ConfigParameters.Import(builder.ConfigParameters);
+			ConfigParameters.Import(builder.ConfigParameters, true);
 			ports = new int[2];
 			FindPorts(ports);
 		}
@@ -340,7 +345,7 @@ namespace NBitcoin.Tests
 			config.Add("rpcport", ports[1].ToString());
 			config.Add("printtoconsole", "1");
 			config.Add("keypool", "10");
-			config.Import(ConfigParameters);
+			config.Import(ConfigParameters, true);
 			File.WriteAllText(_Config, config.ToString());
 			lock(l)
 			{
@@ -548,7 +553,7 @@ namespace NBitcoin.Tests
 			return blocks.ToArray();
 #endif
 		}
-		
+
 		public void BroadcastBlocks(Block[] blocks)
 		{
 			using(var node = CreateNodeClient())
