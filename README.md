@@ -22,3 +22,5 @@ Available on [Nuget](https://www.nuget.org/packages/NBitcoin.TestFramework/).
 ```
 Install-Package NBitcoin.TestFramework
 ```
+
+First run might take times as Bitcoin Core is downloaded automatically.
