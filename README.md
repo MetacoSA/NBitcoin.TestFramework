@@ -16,3 +16,9 @@ using(var builder = NodeBuilder.Create())
 	Assert.Equal(bestblock1, bestblock2);
 }
 ```
+
+Available on [Nuget](https://www.nuget.org/packages/NBitcoin.TestFramework/).
+
+```
+Install-Package NBitcoin.TestFramework
+```
