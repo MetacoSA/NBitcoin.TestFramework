@@ -86,7 +86,6 @@ namespace NBitcoin.Tests
 				Directory.Delete(caller, true);
 			}
 			Directory.CreateDirectory(caller);
-			Directory.CreateDirectory(caller);
 			return new NodeBuilder(caller, path);
 		}
 
