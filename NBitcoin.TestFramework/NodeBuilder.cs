@@ -259,11 +259,17 @@ namespace NBitcoin.Tests
 			Directory.CreateDirectory(dataDir);
 			var pass = Encoders.Hex.EncodeData(RandomUtils.GetBytes(20));
 			creds = new NetworkCredential(pass, pass);
+			AuthenticationString = $"{creds.UserName}:{creds.Password}";
 			_Config = Path.Combine(dataDir, "bitcoin.conf");
 			ConfigParameters.Import(builder.ConfigParameters, true);
 			ports = new int[2];
 			FindPorts(ports);
 		}
+
+		public Network Network
+		{
+			get; set;
+		} = Network.RegTest;
 
 		private void CleanFolder()
 		{
@@ -313,7 +319,23 @@ namespace NBitcoin.Tests
 		readonly NetworkCredential creds;
 		public RPCClient CreateRPCClient()
 		{
-			return new RPCClient(creds, new Uri("http://127.0.0.1:" + ports[1].ToString() + "/"), Network.RegTest);
+			return new RPCClient(AuthenticationString, RPCUri, Network);
+		}
+
+		public Uri RPCUri
+		{
+			get
+			{
+				return new Uri("http://127.0.0.1:" + ports[1].ToString() + "/");
+			}
+		}
+
+		public IPEndPoint NodeEndpoint
+		{
+			get
+			{
+				return new IPEndPoint(IPAddress.Parse("127.0.0.1"), ports[0]);
+			}
 		}
 
 		public RestClient CreateRESTClient()
@@ -323,13 +345,26 @@ namespace NBitcoin.Tests
 #if !NOSOCKET
 		public Node CreateNodeClient()
 		{
-			return Node.Connect(Network.RegTest, "127.0.0.1:" + ports[0].ToString());
+			return Node.Connect(Network, NodeEndpoint);
 		}
 		public Node CreateNodeClient(NodeConnectionParameters parameters)
 		{
-			return Node.Connect(Network.RegTest, "127.0.0.1:" + ports[0].ToString(), parameters);
+			return Node.Connect(Network, "127.0.0.1:" + ports[0].ToString(), parameters);
 		}
 #endif
+
+		/// <summary>
+		/// Nodes connecting to this node will be whitelisted (default: false)
+		/// </summary>
+		public bool WhiteBind
+		{
+			get; set;
+		}
+
+		public string AuthenticationString
+		{
+			get; set;
+		}
 
 		public async Task StartAsync()
 		{
@@ -340,7 +375,10 @@ namespace NBitcoin.Tests
 			config.Add("txindex", "1");
 			config.Add("rpcuser", creds.UserName);
 			config.Add("rpcpassword", creds.Password);
-			config.Add("port", ports[0].ToString());
+			if(!WhiteBind)
+				config.Add("port", ports[0].ToString());
+			else
+				config.Add("whitebind", "127.0.0.1:" + ports[0].ToString());
 			config.Add("rpcport", ports[1].ToString());
 			config.Add("printtoconsole", "1");
 			config.Add("keypool", "10");
