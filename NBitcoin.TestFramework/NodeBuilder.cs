@@ -152,6 +152,11 @@ namespace NBitcoin.Tests
 			}
 		}
 
+		public bool CleanBeforeStartingNode
+		{
+			get; set;
+		} = true;
+
 
 		private readonly List<CoreNode> _Nodes = new List<CoreNode>();
 		public List<CoreNode> Nodes
@@ -253,7 +258,8 @@ namespace NBitcoin.Tests
 			this._Builder = builder;
 			this._Folder = folder;
 			_State = CoreNodeState.Stopped;
-			CleanFolder();
+			if(builder.CleanBeforeStartingNode)
+				CleanFolder();
 			Directory.CreateDirectory(folder);
 			dataDir = Path.Combine(folder, "data");
 			Directory.CreateDirectory(dataDir);
@@ -526,6 +532,14 @@ namespace NBitcoin.Tests
 				_State = CoreNodeState.Killed;
 				if(cleanFolder)
 					CleanFolder();
+			}
+		}
+
+		public void WaitForExit()
+		{
+			if(_Process != null && !_Process.HasExited)
+			{
+				_Process.WaitForExit();
 			}
 		}
 
