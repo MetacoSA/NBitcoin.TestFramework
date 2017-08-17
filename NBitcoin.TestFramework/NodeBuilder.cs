@@ -181,12 +181,16 @@ namespace NBitcoin.Tests
 		{
 			var child = Path.Combine(_Root, last.ToString());
 			last++;
-			try
+			if(CleanBeforeStartingNode)
 			{
-				Directory.Delete(child, true);
-			}
-			catch(DirectoryNotFoundException)
-			{
+				try
+				{
+					Directory.Delete(child, true);
+				}
+				catch(DirectoryNotFoundException)
+				{
+				}
+				
 			}
 			var node = new CoreNode(child, this);
 			Nodes.Add(node);
