@@ -15,6 +15,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -51,51 +52,86 @@ namespace NBitcoin.Tests
 			return builder.ToString();
 		}
 	}
+
+	public class NodeOSDownloadData
+	{
+		public string Archive
+		{
+			get; set;
+		}
+		public string DownloadLink
+		{
+			get; set;
+		}
+		public string Executable
+		{
+			get; set;
+		}
+	}
+
+	public class NodeDownloadData
+	{
+		public string Version
+		{
+			get; set;
+		}
+
+		public NodeOSDownloadData Linux
+		{
+			get; set;
+		}
+
+		public NodeOSDownloadData Mac
+		{
+			get; set;
+		}
+
+		public NodeOSDownloadData Windows
+		{
+			get; set;
+		}
+	}
 	public class NodeBuilder : IDisposable
 	{
 		public static NodeBuilder Create([CallerMemberNameAttribute]string caller = null, string version = "0.13.1")
 		{
 			version = version ?? "0.13.1";
-			var path = EnsureDownloaded(version);
-			bool retryDelete = true;
-			try
+			var bitcoinDownload = new NodeDownloadData()
 			{
-				Directory.Delete(caller, true);
-				retryDelete = false;
-			}
-			catch(DirectoryNotFoundException)
-			{
-				retryDelete = false;
-			}
-			catch(UnauthorizedAccessException)
-			{
-			}
-			catch(IOException)
-			{
-			}
-			if(retryDelete)
-			{
-				foreach(var bitcoind in Process.GetProcessesByName("bitcoind"))
+				Version = version,
+				Linux = new NodeOSDownloadData()
 				{
-					if(bitcoind.MainModule.FileName.Contains("TestData"))
-					{
-						bitcoind.Kill();
-					}
+					Archive = "bitcoin-{0}-x86_64-linux-gnu.tar.gz",
+					DownloadLink = "https://bitcoin.org/bin/bitcoin-core-{0}/bitcoin-{0}-x86_64-linux-gnu.tar.gz",
+					Executable = "bitcoin-{0}/bin/bitcoind"
+				},
+				Mac = new NodeOSDownloadData()
+				{
+					Archive = "bitcoin-{0}-osx64.tar.gz",
+					DownloadLink = "https://bitcoin.org/bin/bitcoin-core-{0}/bitcoin-{0}-osx64.tar.gz",
+					Executable = "bitcoin-{0}/bin/bitcoind"
+				},
+				Windows = new NodeOSDownloadData()
+				{
+					Executable = "bitcoin-{0}/bin/bitcoind.exe",
+					DownloadLink = "https://bitcoin.org/bin/bitcoin-core-{0}/bitcoin-{0}-win32.zip",
+					Archive = "bitcoin-{0}-win32.zip"
 				}
-				Thread.Sleep(1000);
-				Directory.Delete(caller, true);
-			}
-			Directory.CreateDirectory(caller);
+			};
+			return Create(bitcoinDownload, caller);
+		}
+
+		public static NodeBuilder Create(NodeDownloadData downloadData, [CallerMemberNameAttribute]string caller = null)
+		{
+			var isFilePath = downloadData.Version.Length >= 2 && downloadData.Version[1] == ':';
+			var path = isFilePath ? downloadData.Version : EnsureDownloaded(downloadData);
+			if(!Directory.Exists(caller))
+				Directory.CreateDirectory(caller);
 			return new NodeBuilder(caller, path);
 		}
 
-		private static string EnsureDownloaded(string version)
+		private static string EnsureDownloaded(NodeDownloadData downloadData)
 		{
-			//is a file
-			if(version.Length >= 2 && version[1] == ':')
-			{
-				return version;
-			}
 			if(!Directory.Exists("TestData"))
 				Directory.CreateDirectory("TestData");
 
@@ -103,11 +139,11 @@ namespace NBitcoin.Tests
 			string bitcoind;
 			if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 			{
-				bitcoind = String.Format("TestData/bitcoin-{0}/bin/bitcoind.exe", version);
+				bitcoind = "TestData/" + String.Format(downloadData.Windows.Executable, downloadData.Version);
 				if(File.Exists(bitcoind))
 					return bitcoind;
-				zip = String.Format("TestData/bitcoin-{0}-win32.zip", version);
-				string url = String.Format("https://bitcoin.org/bin/bitcoin-core-{0}/" + Path.GetFileName(zip), version);
+				zip = "TestData/" + String.Format(downloadData.Windows.Archive, downloadData.Version);
+				string url = String.Format(downloadData.Windows.DownloadLink, downloadData.Version);
 				HttpClient client = new HttpClient();
 				client.Timeout = TimeSpan.FromMinutes(10.0);
 				var data = client.GetByteArrayAsync(url).GetAwaiter().GetResult();
@@ -116,15 +152,14 @@ namespace NBitcoin.Tests
 			}
 			else
 			{
-				bitcoind = String.Format("TestData/bitcoin-{0}/bin/bitcoind", version);
+				var os = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? downloadData.Linux : downloadData.Mac;
+				bitcoind = "TestData/" + String.Format(os.Executable, downloadData.Version);
 				if(File.Exists(bitcoind))
 					return bitcoind;
 
-				zip = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-					String.Format("TestData/bitcoin-{0}-x86_64-linux-gnu.tar.gz", version)
-					: String.Format("TestData/bitcoin-{0}-osx64.tar.gz", version);
+				zip = "TestData/" + String.Format(os.Archive, downloadData.Version);
 
-				string url = String.Format("https://bitcoin.org/bin/bitcoin-core-{0}/" + Path.GetFileName(zip), version);
+				string url = String.Format(os.DownloadLink, downloadData.Version);
 				HttpClient client = new HttpClient();
 				client.Timeout = TimeSpan.FromMinutes(10.0);
 				var data = client.GetByteArrayAsync(url).GetAwaiter().GetResult();
@@ -181,17 +216,6 @@ namespace NBitcoin.Tests
 		{
 			var child = Path.Combine(_Root, last.ToString());
 			last++;
-			if(CleanBeforeStartingNode)
-			{
-				try
-				{
-					Directory.Delete(child, true);
-				}
-				catch(DirectoryNotFoundException)
-				{
-				}
-				
-			}
 			var node = new CoreNode(child, this);
 			Nodes.Add(node);
 			if(start)
@@ -262,18 +286,69 @@ namespace NBitcoin.Tests
 			this._Builder = builder;
 			this._Folder = folder;
 			_State = CoreNodeState.Stopped;
-			if(builder.CleanBeforeStartingNode)
-				CleanFolder();
-			Directory.CreateDirectory(folder);
+
 			dataDir = Path.Combine(folder, "data");
-			Directory.CreateDirectory(dataDir);
-			var pass = Encoders.Hex.EncodeData(RandomUtils.GetBytes(20));
+			var pass = Hashes.Hash256(Encoding.UTF8.GetBytes(folder)).ToString();
 			creds = new NetworkCredential(pass, pass);
-			AuthenticationString = $"{creds.UserName}:{creds.Password}";
 			_Config = Path.Combine(dataDir, "bitcoin.conf");
 			ConfigParameters.Import(builder.ConfigParameters, true);
 			ports = new int[2];
+
+			if(builder.CleanBeforeStartingNode && File.Exists(_Config))
+			{
+				var oldCreds = ExtractCreds(File.ReadAllText(_Config));
+				AuthenticationString = $"{oldCreds.UserName}:{oldCreds.Password}";
+				ExtractPorts(ports, File.ReadAllText(_Config));
+
+				try
+				{
+
+					this.CreateRPCClient().SendCommand("stop");
+				}
+				catch
+				{
+					try
+					{
+						CleanFolder();
+					}
+					catch
+					{
+						throw new InvalidOperationException("A running instance of bitcoind of a previous run prevent this test from starting. Please close bitcoind process manually and restart the test.");
+					}
+				}
+				CancellationTokenSource cts = new CancellationTokenSource();
+				cts.CancelAfter(10000);
+				while(!cts.IsCancellationRequested && Directory.Exists(_Folder))
+				{
+					try
+					{
+						CleanFolder();
+						break;
+					}
+					catch { }
+					Thread.Sleep(100);
+				}
+				if(cts.IsCancellationRequested)
+					throw new InvalidOperationException("You seem to have a running node from a previous test, please kill the process and restart the test.");
+			}
+
+			AuthenticationString = $"{creds.UserName}:{creds.Password}";
+			Directory.CreateDirectory(folder);
+			Directory.CreateDirectory(dataDir);
 			FindPorts(ports);
+		}
+
+		private void ExtractPorts(int[] ports, string config)
+		{
+			var p = Regex.Match(config, "rpcport=(.*)");
+			ports[1] = int.Parse(p.Groups[1].Value.Trim());
+		}
+
+		private NetworkCredential ExtractCreds(string config)
+		{
+			var user = Regex.Match(config, "rpcuser=(.*)");
+			var pass = Regex.Match(config, "rpcpassword=(.*)");
+			return new NetworkCredential(user.Groups[1].Value.Trim(), pass.Groups[1].Value.Trim());
 		}
 
 		public Network Network

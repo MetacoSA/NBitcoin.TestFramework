@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.6
+VisualStudioVersion = 15.0.27130.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NBitcoin.TestFramework", "NBitcoin.TestFramework\NBitcoin.TestFramework.csproj", "{AF7E0974-5948-4BF9-8C20-E74DB15C0FE6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NBitcoin.TestFramework.Tests", "NBitcoin.TestFramework.Tests\NBitcoin.TestFramework.Tests.csproj", "{5DF2D844-FFF0-4906-AB89-6A959D6844D8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,8 +17,15 @@ Global
 		{AF7E0974-5948-4BF9-8C20-E74DB15C0FE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AF7E0974-5948-4BF9-8C20-E74DB15C0FE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AF7E0974-5948-4BF9-8C20-E74DB15C0FE6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5DF2D844-FFF0-4906-AB89-6A959D6844D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5DF2D844-FFF0-4906-AB89-6A959D6844D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5DF2D844-FFF0-4906-AB89-6A959D6844D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5DF2D844-FFF0-4906-AB89-6A959D6844D8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AAE42EE7-9A5B-4954-BB16-9667545758C3}
 	EndGlobalSection
 EndGlobal
