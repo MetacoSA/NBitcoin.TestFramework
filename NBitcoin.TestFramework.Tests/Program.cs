@@ -7,7 +7,7 @@ namespace NBitcoin.TestFramework.Tests
     {
         static void Main(string[] args)
         {
-			var builder = NodeBuilder.Create(NodeDownloadData.BitcoinCash.v0_16_2);
+			var builder = NodeBuilder.Create(NodeDownloadData.BCash.v0_16_2);
 
 			builder.CreateNode(true);
         }

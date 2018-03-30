@@ -115,7 +115,7 @@ namespace NBitcoin.Tests
 			};
 		}
 
-		public class BitcoinCashNodeDownloadData
+		public class BCashNodeDownloadData
 		{
 			public NodeDownloadData v0_16_2 = new NodeDownloadData()
 			{
@@ -154,9 +154,9 @@ namespace NBitcoin.Tests
 			get; set;
 		} = new LitecoinNodeDownloadData();
 
-		public static BitcoinCashNodeDownloadData BitcoinCash
+		public static BCashNodeDownloadData BCash
 		{
 			get; set;
-		} = new BitcoinCashNodeDownloadData();
+		} = new BCashNodeDownloadData();
 	}
 }

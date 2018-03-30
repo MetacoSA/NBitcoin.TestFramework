@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <VersionPrefix>1.4.7</VersionPrefix>
+    <VersionPrefix>1.4.8</VersionPrefix>
     <TargetFrameworks>netstandard1.6;net452</TargetFrameworks>
     <AssemblyName>NBitcoin.TestFramework</AssemblyName>
     <PackageId>NBitcoin.TestFramework</PackageId>
