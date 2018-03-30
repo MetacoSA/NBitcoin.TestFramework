@@ -67,9 +67,13 @@ namespace NBitcoin.Tests
 		{
 			get; set;
 		}
+		public string Hash
+		{
+			get; set;
+		}
 	}
 
-	public class NodeDownloadData
+	public partial class NodeDownloadData
 	{
 		public string Version
 		{
@@ -90,37 +94,17 @@ namespace NBitcoin.Tests
 		{
 			get; set;
 		}
+
+		public NodeOSDownloadData GetCurrentOSDownloadData()
+		{
+			return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? Windows :
+				   RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? Linux :
+				   RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? Mac :
+				   throw new NotSupportedException();
+		}
 	}
 	public class NodeBuilder : IDisposable
 	{
-		public static NodeBuilder Create([CallerMemberNameAttribute]string caller = null, string version = "0.13.1")
-		{
-			version = version ?? "0.13.1";
-			var bitcoinDownload = new NodeDownloadData()
-			{
-				Version = version,
-				Linux = new NodeOSDownloadData()
-				{
-					Archive = "bitcoin-{0}-x86_64-linux-gnu.tar.gz",
-					DownloadLink = "https://bitcoin.org/bin/bitcoin-core-{0}/bitcoin-{0}-x86_64-linux-gnu.tar.gz",
-					Executable = "bitcoin-{0}/bin/bitcoind"
-				},
-				Mac = new NodeOSDownloadData()
-				{
-					Archive = "bitcoin-{0}-osx64.tar.gz",
-					DownloadLink = "https://bitcoin.org/bin/bitcoin-core-{0}/bitcoin-{0}-osx64.tar.gz",
-					Executable = "bitcoin-{0}/bin/bitcoind"
-				},
-				Windows = new NodeOSDownloadData()
-				{
-					Executable = "bitcoin-{0}/bin/bitcoind.exe",
-					DownloadLink = "https://bitcoin.org/bin/bitcoin-core-{0}/bitcoin-{0}-win32.zip",
-					Archive = "bitcoin-{0}-win32.zip"
-				}
-			};
-			return Create(bitcoinDownload, caller);
-		}
-
 		public static NodeBuilder Create(NodeDownloadData downloadData, [CallerMemberNameAttribute]string caller = null)
 		{
 			var isFilePath = downloadData.Version.Length >= 2 && downloadData.Version[1] == ':';
@@ -137,37 +121,46 @@ namespace NBitcoin.Tests
 
 			string zip;
 			string bitcoind;
+
+			var osDownloadData = downloadData.GetCurrentOSDownloadData();
 			if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 			{
-				bitcoind = "TestData/" + String.Format(downloadData.Windows.Executable, downloadData.Version);
+				bitcoind = "TestData/" + String.Format(osDownloadData.Executable, downloadData.Version);
 				if(File.Exists(bitcoind))
 					return bitcoind;
-				zip = "TestData/" + String.Format(downloadData.Windows.Archive, downloadData.Version);
-				string url = String.Format(downloadData.Windows.DownloadLink, downloadData.Version);
+				zip = "TestData/" + String.Format(osDownloadData.Archive, downloadData.Version);
+				string url = String.Format(osDownloadData.DownloadLink, downloadData.Version);
 				HttpClient client = new HttpClient();
 				client.Timeout = TimeSpan.FromMinutes(10.0);
 				var data = client.GetByteArrayAsync(url).GetAwaiter().GetResult();
+				CheckHash(osDownloadData, data);
 				File.WriteAllBytes(zip, data);
 				ZipFile.ExtractToDirectory(zip, new FileInfo(zip).Directory.FullName);
 			}
 			else
 			{
-				var os = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? downloadData.Linux : downloadData.Mac;
-				bitcoind = "TestData/" + String.Format(os.Executable, downloadData.Version);
+				bitcoind = "TestData/" + String.Format(osDownloadData.Executable, downloadData.Version);
 				if(File.Exists(bitcoind))
 					return bitcoind;
 
-				zip = "TestData/" + String.Format(os.Archive, downloadData.Version);
+				zip = "TestData/" + String.Format(osDownloadData.Archive, downloadData.Version);
 
-				string url = String.Format(os.DownloadLink, downloadData.Version);
+				string url = String.Format(osDownloadData.DownloadLink, downloadData.Version);
 				HttpClient client = new HttpClient();
 				client.Timeout = TimeSpan.FromMinutes(10.0);
 				var data = client.GetByteArrayAsync(url).GetAwaiter().GetResult();
+				CheckHash(osDownloadData, data);
 				File.WriteAllBytes(zip, data);
 				Process.Start("tar", "-zxvf " + zip + " -C TestData").WaitForExit();
 			}
 			File.Delete(zip);
 			return bitcoind;
+		}
+
+		private static void CheckHash(NodeOSDownloadData osDownloadData, byte[] data)
+		{
+			if(Encoders.Hex.EncodeData(Hashes.SHA256(data)) != osDownloadData.Hash)
+				throw new Exception("Hash of downloaded file does not match");
 		}
 
 		int last = 0;
