@@ -143,6 +143,34 @@ namespace NBitcoin.Tests
 				},
 			};
 		}
+		public class PolisNodeDownloadData
+		{
+			public NodeDownloadData v1_3_0 = new NodeDownloadData()
+			{
+				Version = "1.3.0",
+				Windows = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/polispay/polis/releases/download/v{0}/poliscore-{0}-win64.zip",
+					Archive = "poliscore-{0}-win64.zip",
+					Executable = "poliscore-{0}/bin/polisd.exe",
+					Hash = "af022ccdb7d55fdffd1ddddabc2bcde9d72614a4c8412a74456954bacac0e729"
+				},
+				Linux = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/polispay/polis/releases/download/v{0}/poliscore-{0}-x86_64-linux-gnu.tar.gz",
+					Archive = "poliscore-{0}-x86_64-linux-gnu.tar.gz",
+					Executable = "poliscore-{0}/bin/polisd",
+					Hash = "50c3599645fbcfdfa35f4704ed742bbb5fa1ca432067f9b2368deea9784ec771"
+				},
+				Mac = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/polispay/polis/releases/download/v{0}/poliscore-{0}-osx64.tar.gz",
+					Archive = "poliscore-{0}-osx64.tar.gz",
+					Executable = "poliscore-{0}/bin/polisd",
+					Hash = "5a655ddd8eb6b869b902780efe4ec12de24bbede3f6bf2edc3922048928053e5"
+				},
+			};
+		}
 
 		public static BitcoinNodeDownloadData Bitcoin
 		{
@@ -158,5 +186,10 @@ namespace NBitcoin.Tests
 		{
 			get; set;
 		} = new BCashNodeDownloadData();
+
+		public static PolisNodeDownloadData BCash
+		{
+			get; set;
+		} = new PolisNodeDownloadData();
 	}
 }
