@@ -1,3 +1,9 @@
+*****************
+
+DEPRECATED: PROJECT HAVE BEEN MOVED TO https://github.com/MetacoSA/NBitcoin/tree/master/NBitcoin.TestFramework
+
+*****************
+
 # NBitcoin.TestFramework
 A test framework for easily create bitcoind instances in integration tests.
 
